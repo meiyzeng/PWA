@@ -41,3 +41,53 @@ Service Worker 有以下功能和特性
 - Service Worker 的缓存机制是依赖  [Cache API](https://developer.mozilla.org/zh-CN/docs/Web/API/Cache) 实现的
 - 依赖 [HTML5 fetch API](https://developer.mozilla.org/zh-CN/docs/Web/API/Fetch_API)
 - 依赖 [Promise](https://developer.mozilla.org/zh-CN/docs/Web/javaScript/Reference/Global_Objects/Promise) 实现
+
+注册
+```
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js', {scope: '/'})
+            .then(function (registration) {
+
+                // 注册成功
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(function (err) {
+
+                // 注册失败:(
+                console.log('ServiceWorker registration failed: ', err);
+            });
+    });
+}
+```
+
+可以通过 chrome://serviceworker-internals 来查看服务工作线程详情
+ (chrome://inspect/#service-workers 目前好像看不到)
+
+ 我们可以在 install 的时候进行静态资源缓存，也可以通过 fetch 事件处理回调来代理页面请求从而实现动态资源缓存。
+
+ - on install 的优点是第二次访问即可离线，缺点是需要将需要缓存的 URL 在编译时插入到脚本中，增加代码量和降低可维护性；
+ - on fetch 的优点是无需更改编译过程，也不会产生额外的流量，缺点是需要多一次访问才能离线可用。
+
+> Service Worker 版本更新
+
+/sw.js 控制着页面资源和请求的缓存，那么如果缓存策略需要更新呢？也就是如果 /sw.js 有更新怎么办？/sw.js 自身该如何更新？
+
+如果 /sw.js 内容有更新，当访问网站页面时浏览器获取了新的文件，逐字节比对 /sw.js 文件发现不同时它会认为有更新启动 更新算法open_in_new，
+于是会安装新的文件并触发 install 事件。但是此时已经处于激活状态的旧的 Service Worker 还在运行，新的 Service Worker 完成安装后会进入 waiting 状态。
+直到所有已打开的页面都关闭，旧的 Service Worker 自动停止，新的 Service Worker 才会在接下来重新打开的页面里生效。
+
+
+对于网址可寻址的资源，使用 [Cache API](https://developer.mozilla.org/en-US/docs/Web/API/Cache) （服务工作线程的一部分）。 对于所有其他数据，使用 [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) （具有一个 Promise 包装器）。
+
+IndexedDB 基于事件的，而 Cache API 基于 Promise
+
+Promise
+https://developer.mozilla.org/zh-CN/docs/Web/javaScript/Reference/Global_Objects/Promise
+
+Fetch API
+https://developer.mozilla.org/zh-CN/docs/Web/API/Fetch_API
+
+Cache
+
+https://developer.mozilla.org/zh-CN/docs/Web/API/Cache
